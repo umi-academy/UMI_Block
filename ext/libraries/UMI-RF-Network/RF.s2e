@@ -1,0 +1,213 @@
+{	"extensionName": "UMI RF Network",
+	"version":"2.0",
+	"sort":1,
+	"extensionPort": 0,
+	"firmware":"1.1.103",
+	"javascriptURL":"js/arduino.js",
+	"author":"~ Hieu.P.M & Ninh.D.H ~ ",
+	"blockSpecs": [
+
+		["h","UMI RF network","runArduino",{"encode":"","setup":"","inc":"","def":"","work":"","loop":""}],
+
+		["w", "[RFNet] Set node ID %n","Setnode","0",
+		{"encode":"{0}","setup":"mesh.setNodeID({0});\n","inc":"#include <RF24.h>\n#include <RF24Network.h>\n#include <RF24Mesh.h>\n#include <SPI.h>\n","def":"RF24 radio(7,8);\nRF24Network network(radio);\nRF24Mesh mesh(radio,network);\nint thisID = {0};","work":"","loop":"if (thisID == 0) mesh.DHCP();\n"}],
+
+		["w", "[RFNet] Set channel %n","Setchannel","90",
+		{"encode":"{0}","setup":"mesh.begin({0});\n","inc":"#include <RF24.h>\n#include <RF24Network.h>\n#include <RF24Mesh.h>\n#include <SPI.h>\n","def":"RF24 radio(7,8);\nRF24Network network(radio);\nRF24Mesh mesh(radio,network);\n","work":"","loop":"mesh.update();"}],
+
+		/*
+		["w", "[RF] Network update", "NetworkUp",
+		{"setup":"","inc":"#include <RF24.h>\n#include <RF24Network.h>\n#include <RF24Mesh.h>\n#include <SPI.h>\n","def":"RF24 radio(7,8);\nRF24Network network(radio);\nRF24Mesh mesh(radio,network);\n","work":"mesh.update();\n","loop":""}],
+
+		["B", "[RF] Network available","NetworkAvail",
+		{"setup":"","inc":"#include <RF24.h>\n#include <RF24Network.h>\n#include <RF24Mesh.h>\n#include <SPI.h>\n","def":"RF24 radio(7,8);\nRF24Network network(radio);\nRF24Mesh mesh(radio,network);\n","work":"network.available()","loop":""}],
+		*/
+
+		["B", "[RFNet] read value %n from node %n","Master_read_node","0","1",
+		{"encode":"{0},{1}","setup":"","inc":"#include <RF24.h>\n#include <RF24Network.h>\n#include <RF24Mesh.h>\n#include <SPI.h>\n","def":"int data = -1;\nint _ID = -1;\n--separator--bool masterReadFromNode(int payload, int ID)\n--separator--{\nif (network.available())\n--separator--{\nRF24NetworkHeader header;\nnetwork.peek(header);\nswitch (header.type)\n--separator--{\ncase 'M':\nnetwork.read(header, &data, sizeof(data));\n_ID = mesh.getNodeID(header.from_node);\nbreak;\ndefault:\nnetwork.read(header, 0, 0);\nbreak;\n}\n}\nif (ID == _ID && payload == data)\n--separator--{\nreturn true;\n}\nelse\n--separator--{\nreturn false;\n}\n}\n","work":"masterReadFromNode({0}, {1})","loop":""}],
+
+		["B", "[RFNet] read value %n from network","readNet","0",
+		{"encode":"{0}","setup":"","inc":"#include <RF24.h>\n#include <RF24Network.h>\n#include <RF24Mesh.h>\n#include <SPI.h>\n","def":"int data;\n--separator--bool networkRead(int payload)\n--separator--{\nif (network.available())\n--separator--{\nRF24NetworkHeader header;\nnetwork.read(header, &data, sizeof(data));\n}\nif (data == payload)\n--separator--{\nreturn true;\n}\nelse\n--separator--{\nreturn false;\n}\n}\n","work":"networkRead({0})","loop":""}],
+
+		["w", "[RFNet] Send value %n to node %n", "sendNode","0","1",
+		{"encode":"{0},{1}","setup":"","inc":"#include <RF24.h>\n#include <RF24Network.h>\n#include <RF24Mesh.h>\n#include <SPI.h>\n","def":"uint32_t displayTimer = 0;\n--separator--void sendToNode(int payload, int otherID)\n--separator--{\nif (thisID == 0 && otherID > 0 )\n--separator--{\nif (millis() - displayTimer > 50)\n--separator--{\nfor (int i = 0; i < mesh.addrListTop; i++)\n--separator--{\nif (mesh.addrList[i].nodeID == otherID)\n--separator--{\nRF24NetworkHeader header(mesh.addrList[i].address, OCT);\nnetwork.write(header, &payload, sizeof(payload));\n}\n}\ndisplayTimer = millis();\n}\n}\nelse if (thisID > 0 && otherID == 0)\n--separator--{\nif (!mesh.write(&payload, 'M', sizeof(payload)))\n--separator--{\nif ( ! mesh.checkConnection() )\n--separator--{\nmesh.renewAddress();\n}\n}\n}\nelse if (thisID > 0 && otherID > 0)\n--separator--{\nif(!mesh.write(&payload,'M',sizeof(payload),otherID))\n--separator--{\nif( ! mesh.checkConnection() )\n--separator--{\nmesh.renewAddress();\n}\n}\n}\n}\n","work":"sendToNode({0}, {1});\n","loop":""}],
+
+		/*
+		["w", "[RFNet] (Node) Send value %n to master", "NodeSendMas","0",
+		{"encode":"{0}","setup":"","inc":"#include <RF24.h>\n#include <RF24Network.h>\n#include <RF24Mesh.h>\n#include <SPI.h>\n","def":"RF24 radio(7,8);\nRF24Network network(radio);\nRF24Mesh mesh(radio,network);\n--separator--void sendToMaster(int payload)\n--separator--{\nif (!mesh.write(&payload, 'M', sizeof(payload)))\n--separator--{\nif ( ! mesh.checkConnection() )\n--separator--{\nmesh.renewAddress();\n}\n}\n}\n","work":"sendToMaster({0});\n","loop":""}],
+
+		["w", "[RFNet] (Node) Send value %n to node %n", "NodeSendNode","0","2",
+		{"encode":"{0},{1}","setup":"","inc":"#include <RF24.h>\n#include <RF24Network.h>\n#include <RF24Mesh.h>\n#include <SPI.h>\n","def":"RF24 radio(7,8);\nRF24Network network(radio);\nRF24Mesh mesh(radio,network);\n--separator--void sendToNode(int payload, int otherNodeID)\n--separator--{\nif(!mesh.write(&payload,'M',sizeof(payload),otherNodeID))\n--separator--{\nif( ! mesh.checkConnection() )\n--separator--{\nmesh.renewAddress();\n}\n}\n}\n","work":"sendToNode({0},{1});\n","loop":""}],
+		*/
+
+		["w", "Sleep %n seconds", "SleepTime","1",
+		{"encode":"{0}","setup":"","inc":"#include <Sleep_n0m1.h>\n","def":"Sleep sleep;\n--separator--void sleepTime(unsigned long timeSleep)\n--separator--{\nsleep.pwrDownMode();\nsleep.sleepDelay(timeSleep * 1000);\n}\n","work":"sleepTime({0});\n","loop":""}],
+
+		["w", "Sleep interrupt pin %d.inter", "SleepInter","2",
+		{"encode":"{0}","setup":"","inc":"#include <Sleep_n0m1.h>\n","def":"Sleep sleep;\n--separator--void interruptSleep(int pin)\n--separator--{\nsleep.pwrDownMode();\n}\n","work":"interruptSleep({0});\n","loop":""}],
+
+		/*
+		["w", "%d.side motor moves %d.direction with speed %n","motor setup","LEFT","Forward","255",
+		{"encode":"{d0}{d1}{d2}","setup":"    pinMode(4,OUTPUT);\n    pinMode(7,OUTPUT);\n    pinMode(5,OUTPUT);\n    pinMode(8,OUTPUT);\n    pinMode(9,OUTPUT);\n    pinMode(6,OUTPUT);\n","inc":"void Motor(boolean side, boolean direction, double speed);\n","def":"--separator--\nvoid Motor(boolean side, boolean direction, double speed)\n{\n  if(side == 0) analogWrite(5,speed);\n  if(side == 1) analogWrite(6,speed);\n  if(side == 0 && direction == 0) digitalWrite(4,0);\n  if(side == 0 && direction == 0) digitalWrite(7,1);\n  if(side == 0 && direction == 1) digitalWrite(4,1);\n  if(side == 0 && direction == 1) digitalWrite(7,0);\n  if(side == 1 && direction == 0) digitalWrite(8,0);\n  if(side == 1 && direction == 0) digitalWrite(9,1);\n  if(side == 1 && direction == 1) digitalWrite(8,1);\n  if(side == 1 && direction == 1) digitalWrite(9,0);\n}","work":"Motor({0},{1},{2});\n","loop":""}],
+		*/
+
+		/*
+		["B", "read IR code with recv pin %n and code %d.IRcode","myIR","2","Num0",
+		{"encode":"{d0}{d1}","setup":"irrecv_{0}.enableIRIn();\n","inc":"#include <IRremote.h>\n","def":"IRrecv irrecv_{0}({0});\ndecode_results results_{0};\n--separator--int checkIR(unsigned long val)\n{\nint status = 0;\n--separator--if (irrecv_{0}.decode(&results_{0}))\n{\nif (results_{0}.value == val)\n{\nstatus = 1;\n}\nelse\n{\nstatus = 0;\n}\nirrecv_{0}.resume();\n}\nreturn status;\n}\n","work":"checkIR({1})","loop":""}],
+		*/
+
+		/*
+		["w", "send IR code type %d.IRtype output as %d.IRcode","sendIR", "NEC", "ASANO-UP",
+		{"encode":"{d0}{d1}","setup":"","inc":"#include <IRremote.h>\nIRsend irsend;\n","def":"--separator-- void IRsender(long int code, char type)\n{\n	--separator--if(type == 1)\n	{\n		irsend.sendNEC(code, 32);\n		delay(40);\n	}\n	--separator--else if(type == 2)\n	{\n		irsend.sendSony(code, 12);\n		delay(40);\n	}\n	--separator--else\n	{\n		irsend.sendSAMSUNG(code, 32);\n		delay(40);\n	}\n}\n","work":"IRsender({0},{1});\n","loop":""}],
+		*/
+
+		["B", "read bluetooth code %d.button with baud-rate %n","check bluetooth","Up","9600",
+		{"encode":"{d0}{d1}","setup":"Serial.begin({1});\n","inc":"","def":"char state = 0;\n int check(int value)\n {\n if(Serial.available() > 0)\n {\n state = Serial.read();\n if(state == value+48) return 1;\n else return 0;\n }\n else return 0;\n }\n","work":"check({0})","loop":""}],
+
+		["B", "read digital pin %n","getDigital","9",
+		{"encode":"{d0}","setup":"pinMode({0},INPUT);\n","inc":"","def":"","work":"digitalRead({0})","loop":""}],
+
+		["R", "read analog pin (A)%n","getAnalog","0",
+		{"encode":"{d0}","setup":"pinMode(A0+{0},INPUT);\n","inc":"","def":"","work":"analogRead(A0+{0})","loop":""}],
+		
+		["R", "read pulse pin %n timeout %n","getPulse","13",20000,
+		{"encode":"{d0}","setup":"pinMode({0},INPUT);\n","inc":"","def":"","work":"pulseIn({0},HIGH,{1})","loop":""}],
+		
+		["w", "set digital pin %n output as %d.digital","runDigital", "9", "HIGH",
+		{"encode":"{d0}{d1}","setup":"pinMode({0},OUTPUT);\n","inc":"","def":"","work":"digitalWrite({0},{1});\n","loop":""}],
+		
+		["w", "set pwm pin %n output as %d.pwmvalue","runPwm", "5", 0,
+		{"encode":"{d0}{d1}","setup":"pinMode({0},OUTPUT);\n","inc":"","def":"","work":"analogWrite({0},{1});\n","loop":""}],
+		
+		["w", "play tone pin %n on note %d.notes beat %d.beats","runTone", "9", "C4","Half",
+		{"encode":"{d0}{s1}{s2}","setup":"pinMode({0},OUTPUT);\n","inc":"","def":"","work":"tone({0},{1},{2}); // write to buzzer\ndelay({2});\n","loop":""}],
+		
+		["w", "set servo pin %n angle as %d.servovalue","runServoArduino", "9", 90,
+		{"encode":"{d0}{d1}","setup":"servo_{0}.attach({0}); // init pin\n","inc":"#include <Servo.h>\n","def":"Servo servo_{0};\n","work":"servo_{0}.write({1}); // write to servo\n","loop":""}],
+		
+		["w", "serial write text %s", "serialWrite", "hello",
+		{"setup":"Serial.begin(115200);\n","inc":"","def":"","work":"Serial.println({0});\n","loop":""}],
+		
+		["R", "serial available bytes", "serialAvailable",
+		{"setup":"Serial.begin(115200);\n","inc":"","def":"","work":"Serial.available()","loop":""}],
+		
+		["R", "serial read byte", "serialRead",
+		{"setup":"Serial.begin(115200);\n","inc":"","def":"","work":"Serial.read()","loop":""}],
+
+		["R", "read ultrasonic sensor trig pin %n echo pin %n","getUltrasonicArduino",13,12,
+		{"encode":"{d0}","setup":"","inc":"","def":"--separator--float getDistance(int trig,int echo){\npinMode(trig,OUTPUT);\ndigitalWrite(trig,LOW);\ndelayMicroseconds(2);\ndigitalWrite(trig,HIGH);\ndelayMicroseconds(10);\ndigitalWrite(trig,LOW);\npinMode(echo, INPUT);\nreturn pulseIn(echo,HIGH,30000)/58.0;\n}\n","work":"getDistance({0},{1})","loop":""}],
+		
+		["R", "timer","getTimer", "0",
+		{"encode":"{n0}","setup":"","inc":"","def":"double currentTime = 0;\ndouble lastTime = 0;\n--separator--double getLastTime(){\n\treturn currentTime = millis()/1000.0 - lastTime;\n}\n","work":"getLastTime()","loop":""}],
+		
+		["w", "reset timer","resetTimer", "0",
+		{"encode":"{n0}","setup":"","inc":"","def":"double currentTime = 0;\ndouble lastTime = 0;\n","work":"lastTime = millis()/1000.0;\n","loop":""}]
+		
+	],
+	"menus": {
+		"inter":["2","3"],
+		"beats":["500","250","125","1000","2000","0"],
+		"servovalue":["0","45","90","135","180"],
+		"pwmvalue":["0","50","100","150","255"],
+		"digital":["HIGH","LOW"],
+		"notes":["C2","D2","E2","F2","G2","A2","B2","C3","D3","E3","F3","G3","A3","B3","C4","D4","E4","F4","G4","A4","B4","C5","D5","E5","F5","G5","A5","B5","C6","D6","E6","F6","G6","A6","B6","C7","D7","E7","F7","G7","A7","B7","C8","D8"],
+		"beats":["Half","Quarter","Eighth","Whole","Double","Zero"],
+		"side": ["LEFT","RIGHT"],
+		"direction": ["Forward","Backward"],
+		"button":["Up","Down","Left","Right","Square","Triangle","Circle","X","On","Off"],
+		"IRcode": ["CH-","CH","CH+","PREV","NEXT","Play/Pause","Vol-","Vol+","EQ","Num0","100+","200+","Num1","Num2","Num3","Num4","Num5","Num6","Num7","Num8","Num9"]
+
+		/*
+		"IRcode":["ASANO-POWER","ASANO-UP","ASANO-DOWN","ASANO-LEFT","ASANO-RIGHT","ASANO-OK","ASANO-MENU", "ASANO-CH+","ASANO-CH-","ASANO-VOL+","ASANO-VOL-","SONY-POWER", "SONY-UP","SONY-DOWN","SONY-LEFT","SONY-RIGHT","SONY-OK","SONY-MENU", "SONY-CH+","SONY-CH-","SONY-VOL+","SONY-VOL-","SAMSUNG-POWER", "SAMSUNG-UP","SAMSUNG-DOWN","SAMSUNG-LEFT","SAMSUNG-RIGHT","SAMSUNG-OK","SAMSUNG-MENU","SAMSUNG-CH+","SAMSUNG-CH-","SAMSUNG-VOL+","SAMSUNG-VOL-"],
+		"IRtype":["NEC","SONY","SAMSUNG"]
+		*/
+	},
+	"values":{
+		"2":2,
+		"3":3,
+		"run":2,
+		"get":1,
+		"digital":30,
+		"analog":31,
+		"pwm":32,
+		"servo_pin":33,
+		"tone":34,
+		"timer":50,
+		"HIGH":1,"LOW":0,
+		"B0":31,"C1":33,"D1":37,"E1":41,"F1":44,"G1":49,"A1":55,"B1":62,
+			"C2":65,"D2":73,"E2":82,"F2":87,"G2":98,"A2":110,"B2":123,
+			"C3":131,"D3":147,"E3":165,"F3":175,"G3":196,"A3":220,"B3":247,
+			"C4":262,"D4":294,"E4":330,"F4":349,"G4":392,"A4":440,"B4":494,
+			"C5":523,"D5":587,"E5":659,"F5":698,"G5":784,"A5":880,"B5":988,
+			"C6":1047,"D6":1175,"E6":1319,"F6":1397,"G6":1568,"A6":1760,"B6":1976,
+			"C7":2093,"D7":2349,"E7":2637,"F7":2794,"G7":3136,"A7":3520,"B7":3951,
+			"C8":4186,"D8":4699,
+		"Half":500,"Quarter":250,"Eighth":125,"Whole":1000,"Double":2000,"Zero":0,
+		"Up": 1,"Down": 2,"Left": 3,"Right": 4,"Square": 5,"Triangle": 6,"Circle":7,"X":8,
+		"LEFT": 0, "RIGHT": 1,"Forward": 0,"Backward": 1,"On": 1,"Off": 0,
+
+		"CH-": 0xFFA25D,
+		"CH": 0xFF629D,
+		"CH+": 0xFFE21D,
+		"PREV": 0xFF22DD,
+		"NEXT": 0xFF02FD,
+		"Play/Pause": 0xFFC23D,
+		"Vol-": 0xFFE01F,
+		"Vol+": 0xFFA857,
+		"EQ": 0xFF906F,
+		"Num0": 0xFF6897,
+		"100+": 0xFF9867,
+		"200+": 0xFFB04F,
+		"Num1": 0xFF30CF,
+		"Num2": 0xFF18E7,
+		"Num3": 0xFF7A85,
+		"Num4": 0xFF10EF,
+		"Num5": 0xFF38C7,
+		"Num6": 0xFF5AA5,
+		"Num7": 0xFF42BD,
+		"Num8": 0xFF4AB5,
+		"Num9": 0xFF52AD
+
+
+		/*
+		"NEC": 1,
+		"SONY": 2,
+		"SAMSUNG": 3,
+		"ASANO-POWER": 0x1109807F,
+		"ASANO-UP": 0x2FDD42B, 
+		"ASANO-DOWN": 0x2FD34CB, 
+		"ASANO-LEFT": 0x2FDB44B, 
+		"ASANO-RIGHT": 0x2FD748B, 
+		"ASANO-OK": 0x2FDF40B,
+		"ASANO-MENU": 0x1109629D, 
+		"ASANO-CH+": 0x110912ED,
+		"ASANO-CH-": 0x1109926D,
+		"ASANO-VOL+": 0x110922DD,
+		"ASANO-VOL-": 0x1109A25D,
+		"SONY-POWER": 0xA90,
+		"SONY-UP": 0x2F0, 
+		"SONY-DOWN": 0xAF0, 
+		"SONY-LEFT": 0x2D0, 
+		"SONY-RIGHT": 0xCD0, 
+		"SONY-OK": 0xA70,
+		"SONY-MENU": 0x70, 
+		"SONY-CH+": 0x90,
+		"SONY-CH-": 0x890,
+		"SONY-VOL+": 0x490,
+		"SONY-VOL-": 0xC90,
+		"SAMSUNG-POWER": 0xE0E040BF,
+		"SAMSUNG-UP": 0xE0E006F9, 
+		"SAMSUNG-DOWN": 0xE0E08679, 
+		"SAMSUNG-LEFT": 0xE0E0A659, 
+		"SAMSUNG-RIGHT": 0xE0E046B9, 
+		"SAMSUNG-OK": 0xE0E016E9,
+		"SAMSUNG-MENU": 0xE0E058A7, 
+		"SAMSUNG-CH+": 0xE0E048B7,
+		"SAMSUNG-CH-": 0xE0E008F7,
+		"SAMSUNG-VOL+": 0xE0E0E01F,
+		"SAMSUNG-VOL-": 0xE0E0D02F
+		*/
+	},
+	"translators":{
+	}
+}
